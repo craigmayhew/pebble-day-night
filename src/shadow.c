@@ -2,7 +2,6 @@
 #include "config.h"
 
 #define STR_SIZE 20
-#define TIME_OFFSET_PERSIST 1
 #define REDRAW_INTERVAL 15
 #define WIDTH 144
 #define HEIGHT 72
@@ -16,18 +15,10 @@ static GBitmap *image;
 static int redraw_counter;
 // s is set to memory of size STR_SIZE, and temporarily stores strings
 char *s;
-#ifdef PBL_SDK_2
-// Local time is wall time, not UTC, so an offset is used to get UTC
-int time_offset;
-#endif
 
 static void draw_earth() {
   // ##### calculate the time
-#ifdef PBL_SDK_2
-  int now = (int)time(NULL) + time_offset;
-#else
   int now = (int)time(NULL);
-#endif
   float day_of_year; // value from 0 to 1 of progress through a year
   float time_of_day; // value from 0 to 1 of progress through a day
   // approx number of leap years since epoch
@@ -104,24 +95,6 @@ static void handle_minute_tick(struct tm *tick_time, TimeUnits units_changed) {
   }
 }
 
-#ifdef PBL_SDK_2
-// Get the time from the phone, which is probably UTC
-// Calculate and store the offset when compared to the local clock
-static void app_message_inbox_received(DictionaryIterator *iterator, void *context) {
-  Tuple *t = dict_find(iterator, 0);
-  int unixtime = t->value->int32;
-  int now = (int)time(NULL);
-  time_offset = unixtime - now;
-  status_t s = persist_write_int(TIME_OFFSET_PERSIST, time_offset); 
-  if (s) {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Saved time offset %d with status %d", time_offset, (int) s);
-  } else {
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Failed to save time offset with status %d", (int) s);
-  }
-  draw_earth();
-}
-#endif
-
 static void window_load(Window *window) {
 #ifdef BLACK_ON_WHITE
   GColor background_color = GColorWhite;
@@ -171,15 +144,6 @@ static void window_unload(Window *window) {
 static void init(void) {
   redraw_counter = 0;
 
-#ifdef PBL_SDK_2
-  // Load the UTC offset, if it exists
-  time_offset = 0;
-  if (persist_exists(TIME_OFFSET_PERSIST)) {
-    time_offset = persist_read_int(TIME_OFFSET_PERSIST);
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "loaded offset %d", time_offset);
-  }
-#endif
-
 #ifdef PBL_BW
   world_bitmap = gbitmap_create_with_resource(RESOURCE_ID_WORLD);
 #else
@@ -197,11 +161,6 @@ static void init(void) {
 
   s = malloc(STR_SIZE);
   tick_timer_service_subscribe(MINUTE_UNIT, handle_minute_tick);
-
-#ifdef PBL_SDK_2
-  app_message_register_inbox_received(app_message_inbox_received);
-  app_message_open(30, 0);
-#endif
 }
 
 static void deinit(void) {
