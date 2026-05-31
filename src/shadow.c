@@ -47,15 +47,18 @@ static void draw_earth() {
   uint8_t *day_data = night_data + row_bytes * height;
 #endif
   int x, y;
-  for(x = 0; x < width; x++) {
-    int x_angle = TRIG_MAX_ANGLE * x / width;
-    for(y = 0; y < height; y++) {
-      int y_angle = TRIG_MAX_ANGLE * y / (height * 2) - TRIG_MAX_ANGLE/4;
+  for(y = 0; y < height; y++) {
+    int row_offset = y * row_bytes;
+    int y_angle = TRIG_MAX_ANGLE * y / (height * 2) - TRIG_MAX_ANGLE/4;
+    float sin_y = (float)sin_lookup(y_angle) / (float)TRIG_MAX_RATIO;
+    float cos_y = (float)cos_lookup(y_angle) / (float)TRIG_MAX_RATIO;
+    for(x = 0; x < width; x++) {
+      int x_angle = TRIG_MAX_ANGLE * x / width;
       // spherical law of cosines
-      float angle = sin_sun * ((float)sin_lookup(y_angle)/(float)TRIG_MAX_RATIO);
-      angle = angle + cos_sun * ((float)cos_lookup(y_angle)/(float)TRIG_MAX_RATIO) * ((float)cos_lookup(sun_x - x_angle)/(float)TRIG_MAX_RATIO);
+      float angle = sin_sun * sin_y;
+      angle = angle + cos_sun * cos_y * ((float)cos_lookup(sun_x - x_angle)/(float)TRIG_MAX_RATIO);
 #ifdef PBL_BW
-      int byte = y * row_bytes + (int)(x / 8);
+      int byte = row_offset + (int)(x / 8);
       if ((angle < 0) ^ (0x1 & (world_data[byte] >> (7 - x % 8)))) {
         // white pixel
         image_data[byte] = image_data[byte] | (0x1 << (7 - x % 8));
@@ -64,7 +67,7 @@ static void draw_earth() {
         image_data[byte] = image_data[byte] & ~(0x1 << (7 - x % 8));
       }
 #else
-      int byte = y * row_bytes + x;
+      int byte = row_offset + x;
       if (angle < 0) { // dark pixel
         world_data[byte] = night_data[byte];
       } else { // light pixel
