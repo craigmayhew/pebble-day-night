@@ -48,9 +48,9 @@ static void draw_earth() {
 #endif
   int x, y;
   for(x = 0; x < width; x++) {
-    int x_angle = (int)((float)TRIG_MAX_ANGLE * (float)x / (float)(width));
+    int x_angle = TRIG_MAX_ANGLE * x / width;
     for(y = 0; y < height; y++) {
-      int y_angle = (int)((float)TRIG_MAX_ANGLE * (float)y / (float)(height * 2)) - TRIG_MAX_ANGLE/4;
+      int y_angle = TRIG_MAX_ANGLE * y / (height * 2) - TRIG_MAX_ANGLE/4;
       // spherical law of cosines
       float angle = sin_sun * ((float)sin_lookup(y_angle)/(float)TRIG_MAX_RATIO);
       angle = angle + cos_sun * ((float)cos_lookup(y_angle)/(float)TRIG_MAX_RATIO) * ((float)cos_lookup(sun_x - x_angle)/(float)TRIG_MAX_RATIO);
