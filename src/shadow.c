@@ -35,6 +35,11 @@ static void draw_earth() {
   // Earth's inclination is 23.4 degrees, so sun should vary 23.4/90=.26 up and down
   int sun_y = -sin_lookup((day_of_year - 0.2164) * TRIG_MAX_ANGLE) * .26 * .25;
   // ##### draw the bitmap
+  uint8_t *world_data = gbitmap_get_data(world_bitmap);
+#ifdef PBL_BW
+  uint8_t *image_data = gbitmap_get_data(image);
+#endif
+  int row_bytes = gbitmap_get_bytes_per_row(world_bitmap);
   int x, y;
   for(x = 0; x < width; x++) {
     int x_angle = (int)((float)TRIG_MAX_ANGLE * (float)x / (float)(width));
@@ -44,20 +49,20 @@ static void draw_earth() {
       float angle = ((float)sin_lookup(sun_y)/(float)TRIG_MAX_RATIO) * ((float)sin_lookup(y_angle)/(float)TRIG_MAX_RATIO);
       angle = angle + ((float)cos_lookup(sun_y)/(float)TRIG_MAX_RATIO) * ((float)cos_lookup(y_angle)/(float)TRIG_MAX_RATIO) * ((float)cos_lookup(sun_x - x_angle)/(float)TRIG_MAX_RATIO);
 #ifdef PBL_BW
-      int byte = y * gbitmap_get_bytes_per_row(world_bitmap) + (int)(x / 8);
-      if ((angle < 0) ^ (0x1 & (((char *)gbitmap_get_data(world_bitmap))[byte] >> (7 - x % 8)))) {
+      int byte = y * row_bytes + (int)(x / 8);
+      if ((angle < 0) ^ (0x1 & (world_data[byte] >> (7 - x % 8)))) {
         // white pixel
-        ((char *)gbitmap_get_data(image))[byte] = ((char *)gbitmap_get_data(image))[byte] | (0x1 << (7 - x % 8));
+        image_data[byte] = image_data[byte] | (0x1 << (7 - x % 8));
       } else {
         // black pixel
-        ((char *)gbitmap_get_data(image))[byte] = ((char *)gbitmap_get_data(image))[byte] & ~(0x1 << (7 - x % 8));
+        image_data[byte] = image_data[byte] & ~(0x1 << (7 - x % 8));
       }
 #else
-      int byte = y * gbitmap_get_bytes_per_row(world_bitmap) + x;
+      int byte = y * row_bytes + x;
       if (angle < 0) { // dark pixel
-        gbitmap_get_data(world_bitmap)[byte] = gbitmap_get_data(world_bitmap)[width*height + byte];
+        world_data[byte] = world_data[width*height + byte];
       } else { // light pixel
-        gbitmap_get_data(world_bitmap)[byte] = gbitmap_get_data(world_bitmap)[width*height*2 + byte];
+        world_data[byte] = world_data[width*height*2 + byte];
       }
 #endif
     }
